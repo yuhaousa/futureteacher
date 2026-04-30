@@ -1,0 +1,19 @@
+name = "futureteacher-api"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "futureteacher-db"
+database_id = "c4624446-0d8d-4aa3-b1a1-b5adbf2bbb16"
+
+[[r2_buckets]]
+binding = "IMAGES"
+bucket_name = "futureteacher-images"
+
+[vars]
+FRONTEND_URL = "https://futureteacher.pages.dev"
+
+[dev]
+port = 8787
