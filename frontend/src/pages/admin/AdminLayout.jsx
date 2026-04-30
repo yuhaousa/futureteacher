@@ -13,8 +13,13 @@ const adminNav = [
 ];
 
 export default function AdminLayout() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const navigate = useNavigate();
+  if (loading) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#f5f6fa' }}>
+      <div style={{ width: 40, height: 40, border: '4px solid #6c63ff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+    </div>
+  );
   if (!user || user.role !== 'admin') return <Navigate to="/" replace />;
 
   return (

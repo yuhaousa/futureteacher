@@ -17,8 +17,7 @@ export default function Login() {
     setLoading(true);
     try {
       const data = await login(email, password);
-      const dest = data.user.role === 'admin' ? '/admin' : '/home';
-      window.location.href = dest;
+      navigate(data.user.role === 'admin' ? '/admin' : '/home', { replace: true });
     } catch (err) {
       setError(err.response?.data?.error || 'Login failed');
     } finally { setLoading(false); }
