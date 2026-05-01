@@ -278,6 +278,9 @@ export default function AdminCourseware() {
       setQuizzes(prev => [r.data, ...prev]);
       setQuizForm({ ...EMPTY_QUIZ });
       setShowQuizForm(false);
+      // Auto-expand so the user can immediately add questions
+      setExpandedQuiz(r.data.id);
+      setQuizDetail(prev => ({ ...prev, [r.data.id]: { questions: [] } }));
     } catch (e) { alert(e.response?.data?.error || 'Failed to create quiz'); }
     finally { setQuizSaving(false); }
   };
@@ -324,7 +327,29 @@ export default function AdminCourseware() {
     setQuizzes(prev => prev.map(z => z.id === qzid ? { ...z, question_count: Math.max(0, (z.question_count || 1) - 1) } : z));
   };
 
-  // All tags used across resources (for filter pills)
+  // ── Inline quiz question state ─────────────────────────────────────────────
+  const [inlineQForm, setInlineQForm] = useState({}); // { [quizId]: form }
+  const [inlineQShown, setInlineQShown] = useState({}); // { [quizId]: bool }
+  const [inlineQSaving, setInlineQSaving] = useState({});
+
+  const addInlineQuestion = async (qzid) => {
+    const form = inlineQForm[qzid];
+    if (!form?.question_text?.trim()) { alert('Question text is required'); return; }
+    if (form.question_type === 'multiple_choice' && form.options.some(o => !o.trim())) {
+      alert('All 4 options must be filled in'); return;
+    }
+    setInlineQSaving(prev => ({ ...prev, [qzid]: true }));
+    try {
+      const saved = await api.post(`/courses/${courseId}/questions`, normaliseQ(form));
+      await api.post(`/courses/${courseId}/quizzes/${qzid}/questions`, { question_id: saved.data.id });
+      loadQuestions();
+      const r = await api.get(`/courses/${courseId}/quizzes/${qzid}/full`);
+      setQuizDetail(prev => ({ ...prev, [qzid]: r.data }));
+      setQuizzes(prev => prev.map(z => z.id === qzid ? { ...z, question_count: (z.question_count || 0) + 1 } : z));
+      setInlineQForm(prev => ({ ...prev, [qzid]: { ...EMPTY_Q } }));
+    } catch (e) { alert(e.response?.data?.error || 'Failed to save question'); }
+    finally { setInlineQSaving(prev => ({ ...prev, [qzid]: false })); }
+  };
   const allTags = [...new Set(resources.flatMap(r => r.tags || []))].sort();
   const allLabels = [...new Set(resources.map(r => r.label).filter(Boolean))].sort();
 
@@ -1032,7 +1057,7 @@ export default function AdminCourseware() {
                           </div>
                         )}
 
-                        {/* Add from bank */}
+                        {/* Add from bank or inline create */}
                         {bankAvailable.length > 0 && (
                           <div>
                             <div style={{ fontSize: 13, fontWeight: 700, color: '#5a6480', marginBottom: 8 }}>Add from Question Bank ({bankAvailable.length} available)</div>
@@ -1048,9 +1073,81 @@ export default function AdminCourseware() {
                             </div>
                           </div>
                         )}
-                        {bankAvailable.length === 0 && questions.length === 0 && (
-                          <p style={{ fontSize: 13, color: '#9aa2b4', margin: 0 }}>Go to the <strong>Question Bank</strong> tab to create questions first.</p>
-                        )}
+
+                        {/* Inline question creator — always available */}
+                        <div style={{ marginTop: bankAvailable.length > 0 ? 16 : 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: inlineQShown[z.id] ? 10 : 0 }}>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: '#5a6480', display: 'flex', alignItems: 'center', gap: 6 }}><HelpCircle size={14} color="#6c63ff" /> Create &amp; add new question</span>
+                            <button onClick={() => {
+                              setInlineQShown(prev => ({ ...prev, [z.id]: !prev[z.id] }));
+                              if (!inlineQForm[z.id]) setInlineQForm(prev => ({ ...prev, [z.id]: { ...EMPTY_Q } }));
+                            }} style={{ background: inlineQShown[z.id] ? '#f0f2f7' : '#f0eeff', color: inlineQShown[z.id] ? '#5a6480' : '#6c63ff', border: 'none', borderRadius: 7, padding: '5px 13px', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+                              {inlineQShown[z.id] ? <><X size={12} /> Cancel</> : <><Plus size={12} /> New Question</>}
+                            </button>
+                          </div>
+                          {inlineQShown[z.id] && inlineQForm[z.id] && (() => {
+                            const iqf = inlineQForm[z.id];
+                            const setIqf = (updater) => setInlineQForm(prev => ({ ...prev, [z.id]: typeof updater === 'function' ? updater(prev[z.id]) : updater }));
+                            return (
+                              <div style={{ background: '#f8f9fc', borderRadius: 10, padding: 14, border: '1.5px dashed #c0c8dc' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 70px', gap: 10, marginBottom: 10 }}>
+                                  <div>
+                                    <label style={{ fontSize: 11, fontWeight: 600, color: '#5a6480', display: 'block', marginBottom: 3 }}>Question Text *</label>
+                                    <input value={iqf.question_text} onChange={e => setIqf(f => ({ ...f, question_text: e.target.value }))} placeholder="e.g. What is formative assessment?" style={{ width: '100%', padding: '7px 10px', border: '1.5px solid #e0e3ea', borderRadius: 7, fontSize: 13, outline: 'none', boxSizing: 'border-box', background: '#fff' }} />
+                                  </div>
+                                  <div>
+                                    <label style={{ fontSize: 11, fontWeight: 600, color: '#5a6480', display: 'block', marginBottom: 3 }}>Type</label>
+                                    <select value={iqf.question_type} onChange={e => setIqf(f => ({ ...f, question_type: e.target.value, correct_answer: e.target.value === 'true_false' ? 'true' : e.target.value === 'multiple_choice' ? '0' : '', options: e.target.value === 'multiple_choice' ? ['', '', '', ''] : [] }))}
+                                      style={{ width: '100%', padding: '7px 10px', border: '1.5px solid #e0e3ea', borderRadius: 7, fontSize: 13, background: '#fff', outline: 'none' }}>
+                                      {Object.entries(Q_TYPES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                                    </select>
+                                  </div>
+                                  <div>
+                                    <label style={{ fontSize: 11, fontWeight: 600, color: '#5a6480', display: 'block', marginBottom: 3 }}>Points</label>
+                                    <input type="number" min={1} value={iqf.points} onChange={e => setIqf(f => ({ ...f, points: Number(e.target.value) }))} style={{ width: '100%', padding: '7px 10px', border: '1.5px solid #e0e3ea', borderRadius: 7, fontSize: 13, outline: 'none', boxSizing: 'border-box', background: '#fff' }} />
+                                  </div>
+                                </div>
+                                {iqf.question_type === 'multiple_choice' && (
+                                  <div style={{ marginBottom: 10 }}>
+                                    <label style={{ fontSize: 11, fontWeight: 600, color: '#5a6480', display: 'block', marginBottom: 5 }}>Options &amp; Correct Answer</label>
+                                    {iqf.options.map((opt, i) => (
+                                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 5 }}>
+                                        <input type="radio" checked={iqf.correct_answer === String(i)} onChange={() => setIqf(f => ({ ...f, correct_answer: String(i) }))} style={{ accentColor: '#6c63ff', cursor: 'pointer' }} />
+                                        <span style={{ fontSize: 11, fontWeight: 700, color: '#6c63ff', width: 18 }}>{String.fromCharCode(65 + i)}.</span>
+                                        <input value={opt} onChange={e => setIqf(f => ({ ...f, options: f.options.map((o, j) => j === i ? e.target.value : o) }))}
+                                          placeholder={`Option ${String.fromCharCode(65 + i)}`}
+                                          style={{ flex: 1, padding: '6px 9px', border: `1.5px solid ${iqf.correct_answer === String(i) ? '#6c63ff' : '#e0e3ea'}`, borderRadius: 6, fontSize: 12, outline: 'none', background: iqf.correct_answer === String(i) ? '#f8f7ff' : '#fff' }} />
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                                {iqf.question_type === 'true_false' && (
+                                  <div style={{ marginBottom: 10 }}>
+                                    <label style={{ fontSize: 11, fontWeight: 600, color: '#5a6480', display: 'block', marginBottom: 5 }}>Correct Answer</label>
+                                    <div style={{ display: 'flex', gap: 10 }}>
+                                      {['true', 'false'].map(v => (
+                                        <label key={v} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', padding: '6px 14px', borderRadius: 7, border: `2px solid ${iqf.correct_answer === v ? '#6c63ff' : '#e0e3ea'}`, background: iqf.correct_answer === v ? '#f0eeff' : '#fff' }}>
+                                          <input type="radio" checked={iqf.correct_answer === v} onChange={() => setIqf(f => ({ ...f, correct_answer: v }))} style={{ accentColor: '#6c63ff' }} />
+                                          <span style={{ fontWeight: 600, fontSize: 12 }}>{v === 'true' ? 'True' : 'False'}</span>
+                                        </label>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                                {iqf.question_type === 'short_answer' && (
+                                  <div style={{ marginBottom: 10 }}>
+                                    <label style={{ fontSize: 11, fontWeight: 600, color: '#5a6480', display: 'block', marginBottom: 4 }}>Expected Answer</label>
+                                    <input value={iqf.correct_answer} onChange={e => setIqf(f => ({ ...f, correct_answer: e.target.value }))} style={{ width: '100%', padding: '7px 10px', border: '1.5px solid #e0e3ea', borderRadius: 7, fontSize: 13, outline: 'none', boxSizing: 'border-box', background: '#fff' }} />
+                                  </div>
+                                )}
+                                <button onClick={() => addInlineQuestion(z.id)} disabled={inlineQSaving[z.id]}
+                                  style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#6c63ff', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 18px', fontWeight: 700, fontSize: 13, cursor: 'pointer', opacity: inlineQSaving[z.id] ? 0.7 : 1 }}>
+                                  <Plus size={13} /> {inlineQSaving[z.id] ? 'Saving…' : 'Save & Add to Quiz'}
+                                </button>
+                              </div>
+                            );
+                          })()}
+                        </div>
                       </div>
                     )}
                   </div>

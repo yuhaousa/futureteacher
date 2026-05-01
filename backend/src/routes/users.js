@@ -55,7 +55,15 @@ users.get('/stats', authMiddleware, adminMiddleware, async (c) => {
 
 // GET /api/users (admin)
 users.get('/', authMiddleware, adminMiddleware, async (c) => {
-  const { results } = await c.env.DB.prepare('SELECT id, name, email, role, avatar, bio, created_at FROM users ORDER BY created_at DESC').all();
+  const { results } = await c.env.DB.prepare(`
+    SELECT u.id, u.name, u.email, u.role, u.avatar, u.bio, u.created_at,
+      MAX(le.logged_in_at) AS last_login,
+      COUNT(le.id) AS login_count
+    FROM users u
+    LEFT JOIN login_events le ON le.user_id = u.id
+    GROUP BY u.id
+    ORDER BY u.created_at DESC
+  `).all();
   return c.json(results);
 });
 

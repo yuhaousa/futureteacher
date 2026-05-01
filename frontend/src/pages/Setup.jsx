@@ -29,7 +29,7 @@ export default function Setup() {
       const res = await axios.post(`${API_URL}/api/auth/setup`, { password });
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('user', JSON.stringify(res.data.user));
-      navigate('/admin');
+      window.location.href = '/admin';
     } catch (err) {
       setError(err.response?.data?.error || 'Setup failed');
     } finally {

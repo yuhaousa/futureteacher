@@ -5,15 +5,14 @@ import api from '../../api/client';
 
 function BarChart({ data, color, label }) {
   const max = Math.max(...data.map(d => d.count), 1);
-  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   return (
     <div>
       <h3 style={{ fontSize: 14, fontWeight: 700, color: '#1a2035', margin: '0 0 16px' }}>{label}</h3>
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 120 }}>
-        {data.map((d, i) => {
+        {data.map((d) => {
           const pct = max > 0 ? (d.count / max) * 100 : 0;
           const date = new Date(d.day + 'T00:00:00');
-          const dayLabel = days[date.getDay()];
+          const dateLabel = `${date.getMonth() + 1}/${date.getDate()}`;
           return (
             <div key={d.day} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, height: '100%', justifyContent: 'flex-end' }}>
               <span style={{ fontSize: 11, fontWeight: 700, color: d.count > 0 ? color : '#c0c6d4' }}>{d.count > 0 ? d.count : ''}</span>
@@ -32,15 +31,10 @@ function BarChart({ data, color, label }) {
                   }}
                 />
               </div>
-              <span style={{ fontSize: 11, color: '#9aa2b4', marginTop: 2 }}>{dayLabel}</span>
+              <span style={{ fontSize: 10, color: '#9aa2b4', marginTop: 2, whiteSpace: 'nowrap' }}>{dateLabel}</span>
             </div>
           );
         })}
-      </div>
-      {/* Date range label */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
-        <span style={{ fontSize: 10, color: '#b0b7c3' }}>{data[0]?.day?.slice(5)}</span>
-        <span style={{ fontSize: 10, color: '#b0b7c3' }}>{data[data.length - 1]?.day?.slice(5)}</span>
       </div>
     </div>
   );

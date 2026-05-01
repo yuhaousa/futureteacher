@@ -30,13 +30,13 @@ export default function AdminUsers() {
       <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead style={{ background: '#f8f9fc' }}>
-            <tr>{['Name', 'Email', 'Role', 'Joined', ''].map(h => (
+            <tr>{['Name', 'Email', 'Role', 'Joined', 'Last Login', 'Logins', ''].map(h => (
               <th key={h} style={{ textAlign: 'left', padding: '12px 16px', fontSize: 12, color: '#9aa2b4', fontWeight: 700, textTransform: 'uppercase' }}>{h}</th>
             ))}</tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={5} style={{ textAlign: 'center', padding: 40, color: '#aaa' }}>Loading...</td></tr>
+              <tr><td colSpan={7} style={{ textAlign: 'center', padding: 40, color: '#aaa' }}>Loading...</td></tr>
             ) : users.map(u => (
               <tr key={u.id} style={{ borderBottom: '1px solid #f0f2f7' }}>
                 <td style={{ padding: '14px 16px', fontSize: 14, fontWeight: 600, color: '#1a2035' }}>
@@ -54,6 +54,8 @@ export default function AdminUsers() {
                   </span>
                 </td>
                 <td style={{ padding: '14px 16px', fontSize: 13, color: '#9aa2b4' }}>{new Date(u.created_at).toLocaleDateString()}</td>
+                <td style={{ padding: '14px 16px', fontSize: 13, color: '#9aa2b4' }}>{u.last_login ? new Date(u.last_login).toLocaleString() : '—'}</td>
+                <td style={{ padding: '14px 16px', fontSize: 13, color: '#9aa2b4', textAlign: 'center' }}>{u.login_count ?? 0}</td>
                 <td style={{ padding: '14px 16px' }}>
                   <div style={{ display: 'flex', gap: 8 }}>
                     <button onClick={() => handleRoleToggle(u)} title={u.role === 'admin' ? 'Remove admin' : 'Make admin'}
