@@ -12,6 +12,7 @@ function BarChart({ data, color, label }) {
         {data.map((d) => {
           const pct = max > 0 ? (d.count / max) * 100 : 0;
           const date = new Date(d.day + 'T00:00:00');
+          const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
           const dateLabel = `${date.getMonth() + 1}/${date.getDate()}`;
           return (
             <div key={d.day} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, height: '100%', justifyContent: 'flex-end' }}>
@@ -31,7 +32,8 @@ function BarChart({ data, color, label }) {
                   }}
                 />
               </div>
-              <span style={{ fontSize: 10, color: '#9aa2b4', marginTop: 2, whiteSpace: 'nowrap' }}>{dateLabel}</span>
+              <span style={{ fontSize: 10, fontWeight: 600, color: '#7a8294', marginTop: 2, whiteSpace: 'nowrap' }}>{dayName}</span>
+              <span style={{ fontSize: 10, color: '#b0b7c3', whiteSpace: 'nowrap' }}>{dateLabel}</span>
             </div>
           );
         })}
