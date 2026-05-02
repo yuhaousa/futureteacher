@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Pencil, Trash2, X, Save, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Save, ChevronDown, ChevronUp, Search } from 'lucide-react';
 import api from '../../api/client';
 
 const LEVELS = ['basic', 'intermediate', 'advanced', 'expert'];
@@ -65,7 +65,6 @@ function RoleModal({ role, onClose, onSave }) {
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9aa2b4' }}><X size={20} /></button>
         </div>
 
-        {/* Role details */}
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 14, marginBottom: 16 }}>
           <div>
             <label style={{ fontSize: 12, fontWeight: 600, color: '#5a6480', display: 'block', marginBottom: 5 }}>Job Title *</label>
@@ -89,7 +88,6 @@ function RoleModal({ role, onClose, onSave }) {
             style={{ ...inp, resize: 'vertical' }} />
         </div>
 
-        {/* Skill map */}
         <div style={{ marginBottom: 24 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
             <h3 style={{ fontSize: 14, fontWeight: 700, color: '#1a2035', margin: 0 }}>Skill Map ({form.skills.length})</h3>
@@ -126,7 +124,7 @@ function RoleModal({ role, onClose, onSave }) {
 export default function AdminJobRoles() {
   const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [modal, setModal] = useState(null); // null | 'new' | role object
+  const [modal, setModal] = useState(null);
   const [expanded, setExpanded] = useState({});
   const [search, setSearch] = useState('');
   const [filterLevel, setFilterLevel] = useState('');
@@ -166,10 +164,12 @@ export default function AdminJobRoles() {
     return true;
   });
 
-  const inp = { padding: '8px 12px', border: '1.5px solid #e0e3ea', borderRadius: 8, fontSize: 13, outline: 'none', background: '#fff' };
+  const sel = { padding: '8px 12px', border: '1.5px solid #e0e3ea', borderRadius: 8, fontSize: 13, outline: 'none', background: '#fff', color: '#1a2035', cursor: 'pointer' };
+  const lbl = { fontSize: 11, fontWeight: 700, color: '#9aa2b4', textTransform: 'uppercase', display: 'block', marginBottom: 5 };
 
   return (
     <div>
+      {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 700, color: '#1a2035', margin: '0 0 4px' }}>Job Roles</h1>
@@ -181,27 +181,53 @@ export default function AdminJobRoles() {
         </button>
       </div>
 
-      {/* Search & filter bar */}
-      <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 18, flexWrap: 'wrap' }}>
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search roles…"
-          style={{ ...inp, width: 220 }} />
-        <select value={filterLevel} onChange={e => setFilterLevel(e.target.value)} style={{ ...inp }}>
-          <option value="">All levels</option>
-          {ROLE_LEVELS.map(l => <option key={l} value={l}>{l.charAt(0).toUpperCase() + l.slice(1)}</option>)}
-        </select>
-        {allDepts.length > 0 && (
-          <select value={filterDept} onChange={e => setFilterDept(e.target.value)} style={{ ...inp }}>
-            <option value="">All departments</option>
-            {allDepts.map(d => <option key={d} value={d}>{d}</option>)}
-          </select>
-        )}
-        {(search || filterLevel || filterDept) && (
-          <button onClick={() => { setSearch(''); setFilterLevel(''); setFilterDept(''); }}
-            style={{ background: '#fdeaea', color: '#e74c3c', border: 'none', borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-            Clear
-          </button>
-        )}
-        <span style={{ fontSize: 13, color: '#9aa2b4', marginLeft: 'auto' }}>{filtered.length} role{filtered.length !== 1 ? 's' : ''}</span>
+      {/* Search & filter card */}
+      <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.06)', padding: '16px 20px', marginBottom: 18 }}>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+
+          {/* Search */}
+          <div style={{ position: 'relative', flex: '1 1 200px', minWidth: 180, maxWidth: 300 }}>
+            <label style={lbl}>Search</label>
+            <Search size={14} style={{ position: 'absolute', left: 10, bottom: 9, color: '#9aa2b4', pointerEvents: 'none' }} />
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search by title, department…"
+              style={{ width: '100%', padding: '8px 12px 8px 32px', border: '1.5px solid #e0e3ea', borderRadius: 8, fontSize: 13, outline: 'none', background: '#f8f9fc', boxSizing: 'border-box' }}
+            />
+          </div>
+
+          {/* Level filter */}
+          <div>
+            <label style={lbl}>Level</label>
+            <select value={filterLevel} onChange={e => setFilterLevel(e.target.value)} style={sel}>
+              <option value="">All levels</option>
+              {ROLE_LEVELS.map(l => <option key={l} value={l}>{l.charAt(0).toUpperCase() + l.slice(1)}</option>)}
+            </select>
+          </div>
+
+          {/* Department filter */}
+          <div>
+            <label style={lbl}>Department</label>
+            <select value={filterDept} onChange={e => setFilterDept(e.target.value)} style={sel}>
+              <option value="">All departments</option>
+              {allDepts.map(d => <option key={d} value={d}>{d}</option>)}
+            </select>
+          </div>
+
+          {/* Clear + count */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginLeft: 'auto' }}>
+            {(search || filterLevel || filterDept) && (
+              <button onClick={() => { setSearch(''); setFilterLevel(''); setFilterDept(''); }}
+                style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#fdeaea', color: '#e74c3c', border: 'none', borderRadius: 8, padding: '8px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                <X size={12} /> Clear filters
+              </button>
+            )}
+            <span style={{ fontSize: 13, color: '#9aa2b4', whiteSpace: 'nowrap' }}>
+              {filtered.length} role{filtered.length !== 1 ? 's' : ''}
+            </span>
+          </div>
+        </div>
       </div>
 
       {loading ? (
@@ -217,8 +243,8 @@ export default function AdminJobRoles() {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead style={{ background: '#f8f9fc' }}>
               <tr>
-                {['Title', 'Department', 'Level', 'Skills', 'Description', ''].map(h => (
-                  <th key={h} style={{ textAlign: 'left', padding: '12px 16px', fontSize: 12, color: '#9aa2b4', fontWeight: 700, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{h}</th>
+                {['Job Title', 'Department', 'Career Level', 'Skills', 'Description', ''].map((h, i) => (
+                  <th key={h} style={{ textAlign: i === 3 ? 'center' : 'left', padding: '12px 16px', fontSize: 12, color: '#9aa2b4', fontWeight: 700, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -227,25 +253,29 @@ export default function AdminJobRoles() {
                 <tr><td colSpan={6} style={{ textAlign: 'center', padding: 40, color: '#aaa', fontSize: 14 }}>No roles match the current filters.</td></tr>
               ) : filtered.map(role => (<>
                 <tr key={role.id} style={{ borderBottom: expanded[role.id] ? 'none' : '1px solid #f0f2f7', cursor: 'pointer' }} onClick={() => toggle(role.id)}>
-                  <td style={{ padding: '14px 16px', fontSize: 14, fontWeight: 700, color: '#1a2035', whiteSpace: 'nowrap' }}>
+                  <td style={{ padding: '14px 16px', fontSize: 14, fontWeight: 600, color: '#1a2035', whiteSpace: 'nowrap' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       {expanded[role.id] ? <ChevronUp size={14} color="#9aa2b4" /> : <ChevronDown size={14} color="#9aa2b4" />}
                       {role.title}
                     </div>
                   </td>
-                  <td style={{ padding: '14px 16px', fontSize: 13, color: '#5a6480' }}>
+                  <td style={{ padding: '14px 16px' }}>
                     {role.department
-                      ? <span style={{ background: '#f0f2f7', color: '#5a6480', borderRadius: 20, padding: '2px 10px', fontSize: 12, fontWeight: 600 }}>{role.department}</span>
-                      : <span style={{ color: '#c0c8dc' }}>—</span>}
+                      ? <span style={{ background: '#f0f2f7', color: '#5a6480', borderRadius: 20, padding: '3px 10px', fontSize: 12, fontWeight: 600 }}>{role.department}</span>
+                      : <span style={{ color: '#c0c8dc', fontSize: 13 }}>—</span>}
                   </td>
                   <td style={{ padding: '14px 16px' }}>
                     <span style={{ background: '#f0eeff', color: '#6c63ff', borderRadius: 20, padding: '3px 10px', fontSize: 12, fontWeight: 600, textTransform: 'capitalize' }}>{role.level}</span>
                   </td>
-                  <td style={{ padding: '14px 16px', fontSize: 13, color: '#9aa2b4', textAlign: 'center' }}>
-                    {role.skills?.length || 0}
+                  <td style={{ padding: '14px 16px', textAlign: 'center' }}>
+                    {(role.skills?.length || 0) > 0
+                      ? <span style={{ background: '#e8f5e9', color: '#2ecc71', borderRadius: 20, padding: '3px 10px', fontSize: 12, fontWeight: 700 }}>{role.skills.length}</span>
+                      : <span style={{ color: '#c0c8dc', fontSize: 13 }}>0</span>}
                   </td>
-                  <td style={{ padding: '14px 16px', fontSize: 13, color: '#7a8294', maxWidth: 280 }}>
-                    {role.description ? <span>{role.description.slice(0, 100)}{role.description.length > 100 ? '…' : ''}</span> : <span style={{ color: '#c0c8dc' }}>—</span>}
+                  <td style={{ padding: '14px 16px', fontSize: 13, color: '#7a8294', maxWidth: 300 }}>
+                    {role.description
+                      ? <span>{role.description.slice(0, 100)}{role.description.length > 100 ? '…' : ''}</span>
+                      : <span style={{ color: '#c0c8dc' }}>—</span>}
                   </td>
                   <td style={{ padding: '14px 16px' }}>
                     <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }} onClick={e => e.stopPropagation()}>
@@ -274,9 +304,14 @@ export default function AdminJobRoles() {
                             {role.skills.map((s, i) => (
                               <tr key={i} style={{ borderBottom: '1px solid #f0f2f7' }}>
                                 <td style={{ padding: '8px 12px', fontSize: 13, fontWeight: 600, color: '#1a2035' }}>{s.skill_name}</td>
-                                <td style={{ padding: '8px 12px', fontSize: 13, color: '#7a8294' }}>{s.category || '—'}</td>
                                 <td style={{ padding: '8px 12px' }}>
-                                  <span style={{ fontSize: 12, fontWeight: 700, color: LEVEL_COLORS[s.required_level] || '#5a6480', textTransform: 'capitalize' }}>{s.required_level}</span>
+                                  {s.category
+                                    ? <span style={{ background: '#f0f2f7', color: '#5a6480', borderRadius: 20, padding: '2px 8px', fontSize: 12, fontWeight: 600 }}>{s.category}</span>
+                                    : <span style={{ color: '#c0c8dc' }}>—</span>}
+                                </td>
+                                <td style={{ padding: '8px 12px' }}>
+                                  <span style={{ fontSize: 12, fontWeight: 700, color: LEVEL_COLORS[s.required_level] || '#5a6480', textTransform: 'capitalize',
+                                    background: `${LEVEL_COLORS[s.required_level]}18`, borderRadius: 20, padding: '2px 8px' }}>{s.required_level}</span>
                                 </td>
                                 <td style={{ padding: '8px 12px', fontSize: 13, color: '#7a8294' }}>{s.description || '—'}</td>
                               </tr>

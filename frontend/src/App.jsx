@@ -28,6 +28,7 @@ import AdminPathways from './pages/admin/AdminPathways';
 import AdminCommunities from './pages/admin/AdminCommunities';
 import AdminCourseware from './pages/admin/AdminCourseware';
 import AdminJobRoles from './pages/admin/AdminJobRoles';
+import AdminSettings from './pages/admin/AdminSettings';
 
 export default function App() {
   return (
@@ -60,6 +61,7 @@ export default function App() {
             <Route path="communities" element={<AdminCommunities />} />
             <Route path="courseware/:courseId" element={<AdminCourseware />} />
             <Route path="job-roles" element={<AdminJobRoles />} />
+            <Route path="settings" element={<AdminSettings />} />
           </Route>
 
           <Route path="*" element={<AdminOrHomeRedirect />} />

@@ -10,6 +10,7 @@ import usersRoutes from './routes/users.js';
 import aiRoutes from './routes/ai.js';
 import uploadRoutes from './routes/upload.js';
 import jobRolesRoutes from './routes/job-roles.js';
+import skillFrameworksRoutes from './routes/skill-frameworks.js';
 
 const app = new Hono();
 
@@ -34,6 +35,7 @@ app.route('/api/users', usersRoutes);
 app.route('/api/ai', aiRoutes);
 app.route('/api/upload', uploadRoutes);
 app.route('/api/job-roles', jobRolesRoutes);
+app.route('/api/skill-frameworks', skillFrameworksRoutes);
 
 // Serve uploaded images from R2 (handles courses/ and avatars/ sub-paths)
 app.get('/api/images/*', async (c) => {
