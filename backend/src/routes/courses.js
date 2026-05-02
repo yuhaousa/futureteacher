@@ -41,12 +41,13 @@ courses.get('/:id', async (c) => {
     ).bind(...modules.map(m => m.id)).all();
     modules.forEach(m => { m.files = files.filter(f => f.module_id === m.id); });
   }
-  return c.json({ ...course, modules, competency_tags: tagRows.map(r => r.tag) });
+  const { results: skillRows } = await c.env.DB.prepare('SELECT * FROM course_skills WHERE course_id = ? ORDER BY id').bind(id).all();
+  return c.json({ ...course, modules, competency_tags: tagRows.map(r => r.tag), skills: skillRows });
 });
 
 // POST /api/courses (admin)
 courses.post('/', authMiddleware, adminMiddleware, async (c) => {
-  const { title, description, category, modality, level, duration_hours, image_url, instructor_id, status, modules = [], competency_tags = [], start_time, end_time, meeting_url, max_seats, location } = await c.req.json();
+  const { title, description, category, modality, level, duration_hours, image_url, instructor_id, status, modules = [], competency_tags = [], skills = [], start_time, end_time, meeting_url, max_seats, location } = await c.req.json();
   if (!title) return c.json({ error: 'Title is required' }, 400);
   const result = await c.env.DB.prepare(`INSERT INTO courses (title, description, category, modality, level, duration_hours, image_url, instructor_id, status, start_time, end_time, meeting_url, max_seats, location) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(title, description || null, category || null, modality || null, level || 'beginner', duration_hours || 0, image_url || null, instructor_id || null, status || 'published', start_time || null, end_time || null, meeting_url || null, max_seats || null, location || null).run();
   const courseId = result.meta.last_row_id;
@@ -57,6 +58,9 @@ courses.post('/', authMiddleware, adminMiddleware, async (c) => {
   for (const tag of competency_tags) {
     await c.env.DB.prepare('INSERT INTO competency_tags (course_id, tag) VALUES (?, ?)').bind(courseId, tag).run();
   }
+  for (const sk of skills) {
+    if (sk.skill_name) await c.env.DB.prepare('INSERT INTO course_skills (course_id, skill_name, category, proficiency_gained) VALUES (?, ?, ?, ?)').bind(courseId, sk.skill_name, sk.category || null, sk.proficiency_gained || 'basic').run();
+  }
   const course = await c.env.DB.prepare('SELECT * FROM courses WHERE id = ?').bind(courseId).first();
   return c.json(course, 201);
 });
@@ -64,8 +68,12 @@ courses.post('/', authMiddleware, adminMiddleware, async (c) => {
 // PUT /api/courses/:id (admin)
 courses.put('/:id', authMiddleware, adminMiddleware, async (c) => {
   const id = c.req.param('id');
-  const { title, description, category, modality, level, duration_hours, image_url, instructor_id, status, start_time, end_time, meeting_url, max_seats, location } = await c.req.json();
+  const { title, description, category, modality, level, duration_hours, image_url, instructor_id, status, skills = [], start_time, end_time, meeting_url, max_seats, location } = await c.req.json();
   await c.env.DB.prepare(`UPDATE courses SET title=?, description=?, category=?, modality=?, level=?, duration_hours=?, image_url=?, instructor_id=?, status=?, start_time=?, end_time=?, meeting_url=?, max_seats=?, location=? WHERE id=?`).bind(title, description, category, modality, level, duration_hours, image_url, instructor_id, status, start_time || null, end_time || null, meeting_url || null, max_seats || null, location || null, id).run();
+  await c.env.DB.prepare('DELETE FROM course_skills WHERE course_id = ?').bind(id).run();
+  for (const sk of skills) {
+    if (sk.skill_name) await c.env.DB.prepare('INSERT INTO course_skills (course_id, skill_name, category, proficiency_gained) VALUES (?, ?, ?, ?)').bind(id, sk.skill_name, sk.category || null, sk.proficiency_gained || 'basic').run();
+  }
   const course = await c.env.DB.prepare('SELECT * FROM courses WHERE id = ?').bind(id).first();
   return c.json(course);
 });

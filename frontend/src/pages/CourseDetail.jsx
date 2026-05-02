@@ -343,12 +343,31 @@ export default function CourseDetail() {
                 <p style={{ color: '#5a6480', lineHeight: 1.7, margin: 0 }}>{course.description}</p>
               </div>
               {course.competency_tags?.length > 0 && (
-                <div style={{ background: '#fff', borderRadius: 12, padding: 24, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+                <div style={{ background: '#fff', borderRadius: 12, padding: 24, marginBottom: 16, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
                   <h3 style={{ margin: '0 0 14px', fontSize: 16, fontWeight: 700 }}>Competency Areas</h3>
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                     {course.competency_tags.map(tag => (
                       <span key={tag} style={{ background: '#f0eeff', color: '#6c63ff', padding: '5px 14px', borderRadius: 20, fontSize: 13, fontWeight: 500 }}>{tag}</span>
                     ))}
+                  </div>
+                </div>
+              )}
+              {course.skills?.length > 0 && (
+                <div style={{ background: '#fff', borderRadius: 12, padding: 24, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+                  <h3 style={{ margin: '0 0 16px', fontSize: 16, fontWeight: 700 }}>Skills You Will Develop</h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {course.skills.map(sk => {
+                      const levelColor = { basic: '#2ecc71', intermediate: '#3498db', advanced: '#9b59b6', expert: '#e74c3c' }[sk.proficiency_gained] || '#6c63ff';
+                      return (
+                        <div key={sk.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: '#f8f9fc', borderRadius: 9, border: '1px solid #e8eaf0' }}>
+                          <div>
+                            <div style={{ fontWeight: 600, fontSize: 14, color: '#1a2035' }}>{sk.skill_name}</div>
+                            {sk.category && <div style={{ fontSize: 12, color: '#9aa2b4', marginTop: 2 }}>{sk.category}</div>}
+                          </div>
+                          <span style={{ background: levelColor + '22', color: levelColor, padding: '3px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700, textTransform: 'capitalize', flexShrink: 0 }}>{sk.proficiency_gained}</span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}

@@ -3,12 +3,52 @@ import { useNavigate } from 'react-router-dom';
 import api from '../../api/client';
 import { Plus, Pencil, Trash2, X, Upload, Link, BookOpen } from 'lucide-react';
 
-const EMPTY = { title: '', description: '', category: 'assessment', modality: 'Self-Paced', level: 'beginner', duration_hours: 1, image_url: '', status: 'published', competency_tags: '', modules: [], start_time: '', end_time: '', meeting_url: '', max_seats: '', location: '' };
+const SKILL_LEVELS = ['basic', 'intermediate', 'advanced', 'expert'];
+const SKILL_LEVEL_COLORS = { basic: '#2ecc71', intermediate: '#3498db', advanced: '#9b59b6', expert: '#e74c3c' };
+
+const EMPTY = { title: '', description: '', category: 'assessment', modality: 'Self-Paced', level: 'beginner', duration_hours: 1, image_url: '', status: 'published', competency_tags: '', skills: [], modules: [], start_time: '', end_time: '', meeting_url: '', max_seats: '', location: '' };
+
+function buildSkillOptions(frameworks) {
+  return frameworks
+    .filter(fw => fw.skills && fw.skills.length > 0)
+    .map(fw => ({ label: fw.name, skills: fw.skills }));
+}
+
+function CourseSkillRow({ skill, onChange, onRemove, skillGroups }) {
+  const handleSelect = (e) => {
+    const val = e.target.value;
+    if (!val) { onChange({ ...skill, skill_name: '', category: '' }); return; }
+    for (const g of skillGroups) {
+      const found = g.skills.find(s => s.name === val);
+      if (found) { onChange({ ...skill, skill_name: val, category: found.category || '' }); return; }
+    }
+    onChange({ ...skill, skill_name: val });
+  };
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '2.5fr 1fr auto', gap: 8, alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #f0f2f7' }}>
+      <select value={skill.skill_name} onChange={handleSelect}
+        style={{ padding: '7px 10px', border: '1.5px solid #e0e3ea', borderRadius: 7, fontSize: 13, width: '100%' }}>
+        <option value="">— Select skill —</option>
+        {skillGroups.map(g => (
+          <optgroup key={g.label} label={g.label}>
+            {g.skills.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+          </optgroup>
+        ))}
+      </select>
+      <select value={skill.proficiency_gained} onChange={e => onChange({ ...skill, proficiency_gained: e.target.value })}
+        style={{ padding: '7px 10px', border: '1.5px solid #e0e3ea', borderRadius: 7, fontSize: 13, color: SKILL_LEVEL_COLORS[skill.proficiency_gained], fontWeight: 600 }}>
+        {SKILL_LEVELS.map(l => <option key={l} value={l}>{l.charAt(0).toUpperCase() + l.slice(1)}</option>)}
+      </select>
+      <button onClick={onRemove} style={{ background: '#fdeaea', border: 'none', borderRadius: 6, padding: '6px 8px', cursor: 'pointer', color: '#e74c3c' }}><X size={13} /></button>
+    </div>
+  );
+}
 
 export default function AdminCourses() {
   const navigate = useNavigate();
   const [courses, setCourses] = useState([]);
   const [users, setUsers] = useState([]);
+  const [skillGroups, setSkillGroups] = useState([]);
   const [modal, setModal] = useState(null); // null | 'create' | course object
   const [form, setForm] = useState(EMPTY);
   const [saving, setSaving] = useState(false);
@@ -19,6 +59,7 @@ export default function AdminCourses() {
   useEffect(() => {
     api.get('/courses?limit=100').then(r => setCourses(r.data.courses));
     api.get('/users').then(r => setUsers(r.data));
+    api.get('/skill-frameworks').then(r => setSkillGroups(buildSkillOptions(r.data))).catch(() => {});
   }, []);
 
   const openCreate = () => { setForm(EMPTY); setImagePreview(''); setModal('create'); };
@@ -26,6 +67,7 @@ export default function AdminCourses() {
     setForm({
       ...EMPTY, ...c,
       competency_tags: Array.isArray(c.competency_tags) ? c.competency_tags.join(', ') : '',
+      skills: Array.isArray(c.skills) ? c.skills : [],
       start_time: c.start_time || '',
       end_time: c.end_time || '',
       meeting_url: c.meeting_url || '',
@@ -65,6 +107,7 @@ export default function AdminCourses() {
       duration_hours: Number(form.duration_hours),
       max_seats: form.max_seats ? Number(form.max_seats) : null,
       competency_tags: form.competency_tags ? form.competency_tags.split(',').map(t => t.trim()).filter(Boolean) : [],
+      skills: form.skills.filter(s => s.skill_name),
     };
     try {
       if (modal === 'create') {
@@ -261,6 +304,31 @@ export default function AdminCourses() {
                   <option value="">Select instructor</option>
                   {users.map(u => <option key={u.id} value={u.id}>{u.name} ({u.email})</option>)}
                 </select>
+              </div>
+
+              {/* Skills Developed */}
+              <div style={{ border: '1.5px solid #e0e3ea', borderRadius: 10, padding: 16 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <label style={{ fontSize: 13, fontWeight: 700, color: '#3a4260' }}>Skills Developed</label>
+                  <button type="button" onClick={() => setForm(f => ({ ...f, skills: [...f.skills, { skill_name: '', category: '', proficiency_gained: 'basic' }] }))}
+                    style={{ background: '#f0eeff', color: '#6c63ff', border: 'none', borderRadius: 6, padding: '5px 10px', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <Plus size={12} /> Add Skill
+                  </button>
+                </div>
+                {form.skills.length > 0 && (
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#9aa2b4', display: 'grid', gridTemplateColumns: '2.5fr 1fr auto', gap: 8, marginBottom: 4, textTransform: 'uppercase' }}>
+                    <span>Skill (from Framework)</span><span>Level Gained</span><span></span>
+                  </div>
+                )}
+                {form.skills.length === 0
+                  ? <p style={{ color: '#b0b7c3', fontSize: 13, fontStyle: 'italic', margin: 0 }}>No skills linked yet.</p>
+                  : form.skills.map((s, i) => (
+                    <CourseSkillRow key={i} skill={s}
+                      onChange={sk => setForm(f => ({ ...f, skills: f.skills.map((x, xi) => xi === i ? sk : x) }))}
+                      onRemove={() => setForm(f => ({ ...f, skills: f.skills.filter((_, xi) => xi !== i) }))}
+                      skillGroups={skillGroups} />
+                  ))
+                }
               </div>
             </div>
             <div style={{ display: 'flex', gap: 12, marginTop: 24, justifyContent: 'flex-end' }}>
