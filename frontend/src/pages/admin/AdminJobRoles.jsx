@@ -1,6 +1,144 @@
 import { useState, useEffect } from 'react';
-import { Plus, Pencil, Trash2, X, Save, ChevronDown, ChevronUp, Search } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Save, ChevronDown, ChevronUp, Search, BarChart2 } from 'lucide-react';
 import api from '../../api/client';
+
+const LEVEL_VALUES = { basic: 1, intermediate: 2, advanced: 3, expert: 4 };
+
+function RadarChart({ skills }) {
+  if (!skills || skills.length === 0) return <p style={{ textAlign: 'center', color: '#9aa2b4', fontStyle: 'italic' }}>No skills defined.</p>;
+
+  const size = 340;
+  const cx = size / 2;
+  const cy = size / 2;
+  const maxR = 130;
+  const levels = 4;
+  const n = skills.length;
+  const angleStep = (2 * Math.PI) / n;
+
+  // grid polygons
+  const gridPolys = Array.from({ length: levels }, (_, li) => {
+    const r = (maxR / levels) * (li + 1);
+    return Array.from({ length: n }, (__, i) => {
+      const a = i * angleStep - Math.PI / 2;
+      return `${cx + r * Math.cos(a)},${cy + r * Math.sin(a)}`;
+    }).join(' ');
+  });
+
+  // axis lines
+  const axes = skills.map((_, i) => {
+    const a = i * angleStep - Math.PI / 2;
+    return { x2: cx + maxR * Math.cos(a), y2: cy + maxR * Math.sin(a) };
+  });
+
+  // data polygon
+  const dataPoints = skills.map((s, i) => {
+    const val = LEVEL_VALUES[s.required_level] || 1;
+    const r = (maxR / levels) * val;
+    const a = i * angleStep - Math.PI / 2;
+    return `${cx + r * Math.cos(a)},${cy + r * Math.sin(a)}`;
+  }).join(' ');
+
+  // labels
+  const labelOffset = 22;
+  const labels = skills.map((s, i) => {
+    const a = i * angleStep - Math.PI / 2;
+    const r = maxR + labelOffset;
+    const x = cx + r * Math.cos(a);
+    const y = cy + r * Math.sin(a);
+    const anchor = Math.abs(Math.cos(a)) < 0.1 ? 'middle' : Math.cos(a) > 0 ? 'start' : 'end';
+    // wrap long names
+    const words = s.skill_name.split(' ');
+    const lines = [];
+    let cur = '';
+    for (const w of words) {
+      if ((cur + ' ' + w).trim().length > 16) { lines.push(cur.trim()); cur = w; }
+      else cur = (cur + ' ' + w).trim();
+    }
+    if (cur) lines.push(cur.trim());
+    return { x, y, anchor, lines, level: s.required_level };
+  });
+
+  const levelColors = { basic: '#2ecc71', intermediate: '#3498db', advanced: '#9b59b6', expert: '#e74c3c' };
+
+  return (
+    <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size} style={{ display: 'block', margin: '0 auto' }}>
+      {/* grid */}
+      {gridPolys.map((pts, i) => (
+        <polygon key={i} points={pts} fill="none" stroke="#e0e3ea" strokeWidth={1} />
+      ))}
+      {/* axis lines */}
+      {axes.map((a, i) => (
+        <line key={i} x1={cx} y1={cy} x2={a.x2} y2={a.y2} stroke="#e0e3ea" strokeWidth={1} />
+      ))}
+      {/* level ticks on first axis */}
+      {Array.from({ length: levels }, (_, li) => {
+        const r = (maxR / levels) * (li + 1);
+        const lbl = ['Basic', 'Intermediate', 'Advanced', 'Expert'][li];
+        return <text key={li} x={cx + 4} y={cy - r + 4} fontSize={8} fill="#b0b7c3">{lbl}</text>;
+      })}
+      {/* data area */}
+      <polygon points={dataPoints} fill="#6c63ff33" stroke="#6c63ff" strokeWidth={2} />
+      {/* data dots */}
+      {skills.map((s, i) => {
+        const val = LEVEL_VALUES[s.required_level] || 1;
+        const r = (maxR / levels) * val;
+        const a = i * angleStep - Math.PI / 2;
+        const col = levelColors[s.required_level] || '#6c63ff';
+        return <circle key={i} cx={cx + r * Math.cos(a)} cy={cy + r * Math.sin(a)} r={5} fill={col} stroke="#fff" strokeWidth={2} />;
+      })}
+      {/* labels */}
+      {labels.map((l, i) => (
+        <text key={i} x={l.x} y={l.y} textAnchor={l.anchor} fontSize={10} fontWeight={600} fill="#1a2035">
+          {l.lines.map((line, li) => (
+            <tspan key={li} x={l.x} dy={li === 0 ? 0 : 13}>{line}</tspan>
+          ))}
+        </text>
+      ))}
+    </svg>
+  );
+}
+
+function SkillRadarModal({ role, onClose }) {
+  const levelColors = { basic: '#2ecc71', intermediate: '#3498db', advanced: '#9b59b6', expert: '#e74c3c' };
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+      onClick={onClose}>
+      <div style={{ background: '#fff', borderRadius: 18, width: '100%', maxWidth: 520, padding: '28px 32px', boxShadow: '0 8px 40px rgba(108,99,255,0.18)' }}
+        onClick={e => e.stopPropagation()}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+          <div>
+            <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: '#1a2035' }}>{role.title}</h2>
+            <p style={{ margin: '3px 0 0', fontSize: 12, color: '#9aa2b4' }}>{role.department || ''}{role.department && role.level ? ' · ' : ''}<span style={{ textTransform: 'capitalize' }}>{role.level}</span></p>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9aa2b4', padding: 4 }}><X size={18} /></button>
+        </div>
+        <div style={{ marginBottom: 16 }}>
+          <RadarChart skills={role.skills} />
+        </div>
+        {/* legend */}
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 16, flexWrap: 'wrap' }}>
+          {['basic', 'intermediate', 'advanced', 'expert'].map(l => (
+            <div key={l} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: '#5a6480' }}>
+              <span style={{ width: 10, height: 10, borderRadius: '50%', background: levelColors[l], display: 'inline-block' }} />
+              <span style={{ textTransform: 'capitalize', fontWeight: 600 }}>{l}</span>
+            </div>
+          ))}
+        </div>
+        {/* skill list summary */}
+        <div style={{ marginTop: 18, borderTop: '1px solid #f0f2f7', paddingTop: 14 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {(role.skills || []).map((s, i) => (
+              <span key={i} style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#f8f9fc', borderRadius: 20, padding: '4px 10px', fontSize: 11, fontWeight: 600, color: '#5a6480', border: '1px solid #e8eaf0' }}>
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: levelColors[s.required_level] || '#9aa2b4', flexShrink: 0 }} />
+                {s.skill_name}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const LEVELS = ['basic', 'intermediate', 'advanced', 'expert'];
 const LEVEL_COLORS = { basic: '#2ecc71', intermediate: '#3498db', advanced: '#9b59b6', expert: '#e74c3c' };
@@ -125,6 +263,7 @@ export default function AdminJobRoles() {
   const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(null);
+  const [radarRole, setRadarRole] = useState(null);
   const [expanded, setExpanded] = useState({});
   const [search, setSearch] = useState('');
   const [filterLevel, setFilterLevel] = useState('');
@@ -279,6 +418,8 @@ export default function AdminJobRoles() {
                   </td>
                   <td style={{ padding: '14px 16px' }}>
                     <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }} onClick={e => e.stopPropagation()}>
+                      <button onClick={() => setRadarRole(role)} title="Skill Radar Chart"
+                        style={{ background: '#e8f5e9', color: '#27ae60', border: 'none', borderRadius: 7, padding: '7px 10px', cursor: 'pointer' }}><BarChart2 size={14} /></button>
                       <button onClick={() => setModal(role)}
                         style={{ background: '#f0eeff', color: '#6c63ff', border: 'none', borderRadius: 7, padding: '7px 10px', cursor: 'pointer' }}><Pencil size={14} /></button>
                       <button onClick={() => handleDelete(role.id)}
@@ -334,6 +475,9 @@ export default function AdminJobRoles() {
           onClose={() => setModal(null)}
           onSave={handleSave}
         />
+      )}
+      {radarRole && (
+        <SkillRadarModal role={radarRole} onClose={() => setRadarRole(null)} />
       )}
     </div>
   );
