@@ -63,19 +63,22 @@ export default function AdminCourses() {
   }, []);
 
   const openCreate = () => { setForm(EMPTY); setImagePreview(''); setModal('create'); };
-  const openEdit = (c) => {
+  const openEdit = async (c) => {
+    // Fetch full course (includes skills) before opening modal
+    let full = c;
+    try { const r = await api.get(`/courses/${c.id}`); full = r.data; } catch {}
     setForm({
-      ...EMPTY, ...c,
-      competency_tags: Array.isArray(c.competency_tags) ? c.competency_tags.join(', ') : '',
-      skills: Array.isArray(c.skills) ? c.skills : [],
-      start_time: c.start_time || '',
-      end_time: c.end_time || '',
-      meeting_url: c.meeting_url || '',
-      max_seats: c.max_seats || '',
-      location: c.location || '',
+      ...EMPTY, ...full,
+      competency_tags: Array.isArray(full.competency_tags) ? full.competency_tags.join(', ') : '',
+      skills: Array.isArray(full.skills) ? full.skills : [],
+      start_time: full.start_time || '',
+      end_time: full.end_time || '',
+      meeting_url: full.meeting_url || '',
+      max_seats: full.max_seats || '',
+      location: full.location || '',
     });
-    setImagePreview(c.image_url || '');
-    setModal(c);
+    setImagePreview(full.image_url || '');
+    setModal(full);
   };
 
   const handleImageUpload = async (e) => {
