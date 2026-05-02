@@ -4,18 +4,33 @@ import api from '../../api/client';
 
 const LEVEL_VALUES = { basic: 1, intermediate: 2, advanced: 3, expert: 4 };
 
+function wrapWords(text, maxChars) {
+  const words = text.split(' ');
+  const lines = [];
+  let cur = '';
+  for (const w of words) {
+    const candidate = cur ? cur + ' ' + w : w;
+    if (candidate.length > maxChars) { if (cur) lines.push(cur); cur = w; }
+    else cur = candidate;
+  }
+  if (cur) lines.push(cur);
+  return lines;
+}
+
 function RadarChart({ skills }) {
   if (!skills || skills.length === 0) return <p style={{ textAlign: 'center', color: '#9aa2b4', fontStyle: 'italic' }}>No skills defined.</p>;
 
-  const size = 340;
+  const pad = 110; // padding on each side for labels
+  const innerSize = 320;
+  const size = innerSize + pad * 2;
   const cx = size / 2;
   const cy = size / 2;
-  const maxR = 130;
+  const maxR = innerSize / 2;
   const levels = 4;
   const n = skills.length;
   const angleStep = (2 * Math.PI) / n;
+  const levelColors = { basic: '#2ecc71', intermediate: '#3498db', advanced: '#9b59b6', expert: '#e74c3c' };
 
-  // grid polygons
   const gridPolys = Array.from({ length: levels }, (_, li) => {
     const r = (maxR / levels) * (li + 1);
     return Array.from({ length: n }, (__, i) => {
@@ -24,13 +39,11 @@ function RadarChart({ skills }) {
     }).join(' ');
   });
 
-  // axis lines
   const axes = skills.map((_, i) => {
     const a = i * angleStep - Math.PI / 2;
     return { x2: cx + maxR * Math.cos(a), y2: cy + maxR * Math.sin(a) };
   });
 
-  // data polygon
   const dataPoints = skills.map((s, i) => {
     const val = LEVEL_VALUES[s.required_level] || 1;
     const r = (maxR / levels) * val;
@@ -38,60 +51,40 @@ function RadarChart({ skills }) {
     return `${cx + r * Math.cos(a)},${cy + r * Math.sin(a)}`;
   }).join(' ');
 
-  // labels
-  const labelOffset = 22;
+  const labelGap = 18;
   const labels = skills.map((s, i) => {
     const a = i * angleStep - Math.PI / 2;
-    const r = maxR + labelOffset;
+    const r = maxR + labelGap;
     const x = cx + r * Math.cos(a);
-    const y = cy + r * Math.sin(a);
-    const anchor = Math.abs(Math.cos(a)) < 0.1 ? 'middle' : Math.cos(a) > 0 ? 'start' : 'end';
-    // wrap long names
-    const words = s.skill_name.split(' ');
-    const lines = [];
-    let cur = '';
-    for (const w of words) {
-      if ((cur + ' ' + w).trim().length > 16) { lines.push(cur.trim()); cur = w; }
-      else cur = (cur + ' ' + w).trim();
-    }
-    if (cur) lines.push(cur.trim());
-    return { x, y, anchor, lines, level: s.required_level };
+    const baseY = cy + r * Math.sin(a);
+    const cosA = Math.cos(a);
+    const anchor = Math.abs(cosA) < 0.15 ? 'middle' : cosA > 0 ? 'start' : 'end';
+    const lines = wrapWords(s.skill_name, 14);
+    // vertical anchor: if pointing up, shift up by line count; if down, no shift
+    const sinA = Math.sin(a);
+    const lineH = 13;
+    const yShift = sinA < -0.15 ? -(lines.length - 1) * lineH : sinA > 0.15 ? 0 : -(lines.length - 1) * lineH / 2;
+    return { x, y: baseY + yShift, anchor, lines, level: s.required_level };
   });
 
-  const levelColors = { basic: '#2ecc71', intermediate: '#3498db', advanced: '#9b59b6', expert: '#e74c3c' };
-
   return (
-    <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size} style={{ display: 'block', margin: '0 auto' }}>
-      {/* grid */}
-      {gridPolys.map((pts, i) => (
-        <polygon key={i} points={pts} fill="none" stroke="#e0e3ea" strokeWidth={1} />
-      ))}
-      {/* axis lines */}
-      {axes.map((a, i) => (
-        <line key={i} x1={cx} y1={cy} x2={a.x2} y2={a.y2} stroke="#e0e3ea" strokeWidth={1} />
-      ))}
-      {/* level ticks on first axis */}
+    <svg viewBox={`0 0 ${size} ${size}`} style={{ display: 'block', width: '100%', maxWidth: size }}>
+      {gridPolys.map((pts, i) => <polygon key={i} points={pts} fill="none" stroke="#e0e3ea" strokeWidth={1} />)}
+      {axes.map((a, i) => <line key={i} x1={cx} y1={cy} x2={a.x2} y2={a.y2} stroke="#e0e3ea" strokeWidth={1} />)}
       {Array.from({ length: levels }, (_, li) => {
         const r = (maxR / levels) * (li + 1);
-        const lbl = ['Basic', 'Intermediate', 'Advanced', 'Expert'][li];
-        return <text key={li} x={cx + 4} y={cy - r + 4} fontSize={8} fill="#b0b7c3">{lbl}</text>;
+        return <text key={li} x={cx + 4} y={cy - r + 4} fontSize={9} fill="#c0c8dc">{['Basic','Interm.','Advanced','Expert'][li]}</text>;
       })}
-      {/* data area */}
-      <polygon points={dataPoints} fill="#6c63ff33" stroke="#6c63ff" strokeWidth={2} />
-      {/* data dots */}
+      <polygon points={dataPoints} fill="#6c63ff22" stroke="#6c63ff" strokeWidth={2.5} />
       {skills.map((s, i) => {
         const val = LEVEL_VALUES[s.required_level] || 1;
         const r = (maxR / levels) * val;
         const a = i * angleStep - Math.PI / 2;
-        const col = levelColors[s.required_level] || '#6c63ff';
-        return <circle key={i} cx={cx + r * Math.cos(a)} cy={cy + r * Math.sin(a)} r={5} fill={col} stroke="#fff" strokeWidth={2} />;
+        return <circle key={i} cx={cx + r * Math.cos(a)} cy={cy + r * Math.sin(a)} r={5} fill={levelColors[s.required_level] || '#6c63ff'} stroke="#fff" strokeWidth={2} />;
       })}
-      {/* labels */}
       {labels.map((l, i) => (
-        <text key={i} x={l.x} y={l.y} textAnchor={l.anchor} fontSize={10} fontWeight={600} fill="#1a2035">
-          {l.lines.map((line, li) => (
-            <tspan key={li} x={l.x} dy={li === 0 ? 0 : 13}>{line}</tspan>
-          ))}
+        <text key={i} textAnchor={l.anchor} fontSize={11} fontWeight={600} fill="#2d3560">
+          {l.lines.map((line, li) => <tspan key={li} x={l.x} y={l.y + li * 13}>{line}</tspan>)}
         </text>
       ))}
     </svg>
@@ -103,7 +96,7 @@ function SkillRadarModal({ role, onClose }) {
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
       onClick={onClose}>
-      <div style={{ background: '#fff', borderRadius: 18, width: '100%', maxWidth: 520, padding: '28px 32px', boxShadow: '0 8px 40px rgba(108,99,255,0.18)' }}
+      <div style={{ background: '#fff', borderRadius: 18, width: '100%', maxWidth: 720, maxHeight: '92vh', overflowY: 'auto', padding: '28px 32px', boxShadow: '0 8px 40px rgba(108,99,255,0.18)' }}
         onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
           <div>
@@ -142,28 +135,51 @@ function SkillRadarModal({ role, onClose }) {
 
 const LEVELS = ['basic', 'intermediate', 'advanced', 'expert'];
 const LEVEL_COLORS = { basic: '#2ecc71', intermediate: '#3498db', advanced: '#9b59b6', expert: '#e74c3c' };
-const CATEGORIES = ['Pedagogy', 'Technology', 'Leadership', 'Communication', 'Assessment', 'Curriculum', 'Administration', 'Other'];
 const ROLE_LEVELS = ['entry', 'mid', 'senior', 'lead', 'manager'];
 
 const EMPTY_ROLE = { title: '', description: '', department: '', level: 'entry', skills: [] };
 const EMPTY_SKILL = { skill_name: '', category: '', required_level: 'basic', description: '' };
 
-function SkillRow({ skill, onChange, onRemove }) {
+// Flatten all skills from all frameworks into a grouped option list
+function buildSkillOptions(frameworks) {
+  const groups = [];
+  for (const fw of frameworks) {
+    if (!fw.skills || fw.skills.length === 0) continue;
+    groups.push({ label: fw.name, skills: fw.skills });
+  }
+  return groups;
+}
+
+function SkillRow({ skill, onChange, onRemove, skillGroups }) {
+  // When a framework skill is selected, auto-fill category from framework skill
+  const handleSelectSkill = (e) => {
+    const val = e.target.value;
+    if (!val) { onChange({ ...skill, skill_name: '', category: '' }); return; }
+    // Find the matching framework skill to auto-fill category
+    for (const g of skillGroups) {
+      const found = g.skills.find(s => s.name === val);
+      if (found) { onChange({ ...skill, skill_name: val, category: found.category || skill.category }); return; }
+    }
+    onChange({ ...skill, skill_name: val });
+  };
+
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr 1fr 2fr auto', gap: 8, alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #f0f2f7' }}>
-      <input value={skill.skill_name} onChange={e => onChange({ ...skill, skill_name: e.target.value })}
-        placeholder="Skill name" style={{ padding: '7px 10px', border: '1.5px solid #e0e3ea', borderRadius: 7, fontSize: 13 }} />
-      <select value={skill.category} onChange={e => onChange({ ...skill, category: e.target.value })}
+    <div style={{ display: 'grid', gridTemplateColumns: '2.5fr 1fr 2fr auto', gap: 8, alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #f0f2f7' }}>
+      <select value={skill.skill_name} onChange={handleSelectSkill}
         style={{ padding: '7px 10px', border: '1.5px solid #e0e3ea', borderRadius: 7, fontSize: 13 }}>
-        <option value="">Category</option>
-        {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+        <option value="">— Select skill from framework —</option>
+        {skillGroups.map(g => (
+          <optgroup key={g.label} label={g.label}>
+            {g.skills.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+          </optgroup>
+        ))}
       </select>
       <select value={skill.required_level} onChange={e => onChange({ ...skill, required_level: e.target.value })}
         style={{ padding: '7px 10px', border: '1.5px solid #e0e3ea', borderRadius: 7, fontSize: 13, color: LEVEL_COLORS[skill.required_level] || '#1a2035', fontWeight: 600 }}>
         {LEVELS.map(l => <option key={l} value={l}>{l.charAt(0).toUpperCase() + l.slice(1)}</option>)}
       </select>
       <input value={skill.description} onChange={e => onChange({ ...skill, description: e.target.value })}
-        placeholder="Description (optional)" style={{ padding: '7px 10px', border: '1.5px solid #e0e3ea', borderRadius: 7, fontSize: 13 }} />
+        placeholder="Notes (optional)" style={{ padding: '7px 10px', border: '1.5px solid #e0e3ea', borderRadius: 7, fontSize: 13 }} />
       <button onClick={onRemove} style={{ background: '#fdeaea', border: 'none', borderRadius: 6, padding: '6px 8px', cursor: 'pointer', color: '#e74c3c' }}><X size={13} /></button>
     </div>
   );
@@ -172,6 +188,11 @@ function SkillRow({ skill, onChange, onRemove }) {
 function RoleModal({ role, onClose, onSave }) {
   const [form, setForm] = useState(role || EMPTY_ROLE);
   const [saving, setSaving] = useState(false);
+  const [skillGroups, setSkillGroups] = useState([]);
+
+  useEffect(() => {
+    api.get('/skill-frameworks').then(r => setSkillGroups(buildSkillOptions(r.data))).catch(() => {});
+  }, []);
 
   const addSkill = () => setForm(f => ({ ...f, skills: [...f.skills, { ...EMPTY_SKILL }] }));
   const updateSkill = (i, s) => setForm(f => ({ ...f, skills: f.skills.map((sk, idx) => idx === i ? s : sk) }));
@@ -235,14 +256,14 @@ function RoleModal({ role, onClose, onSave }) {
             </button>
           </div>
           {form.skills.length > 0 && (
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#9aa2b4', display: 'grid', gridTemplateColumns: '2fr 1.2fr 1fr 2fr auto', gap: 8, padding: '0 0 6px', textTransform: 'uppercase' }}>
-              <span>Skill</span><span>Category</span><span>Level</span><span>Description</span><span></span>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#9aa2b4', display: 'grid', gridTemplateColumns: '2.5fr 1fr 2fr auto', gap: 8, padding: '0 0 6px', textTransform: 'uppercase' }}>
+              <span>Skill (from Framework)</span><span>Required Level</span><span>Notes</span><span></span>
             </div>
           )}
           {form.skills.length === 0
-            ? <p style={{ color: '#b0b7c3', fontSize: 13, fontStyle: 'italic' }}>No skills defined yet. Click "Add Skill" to build the skill map.</p>
+            ? <p style={{ color: '#b0b7c3', fontSize: 13, fontStyle: 'italic' }}>No skills defined yet. Click "Add Skill" to select from your skill frameworks.</p>
             : form.skills.map((s, i) => (
-              <SkillRow key={i} skill={s} onChange={sk => updateSkill(i, sk)} onRemove={() => removeSkill(i)} />
+              <SkillRow key={i} skill={s} onChange={sk => updateSkill(i, sk)} onRemove={() => removeSkill(i)} skillGroups={skillGroups} />
             ))
           }
         </div>
