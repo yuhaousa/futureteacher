@@ -1,7 +1,7 @@
 ﻿import { useState, useEffect } from 'react';
 import { NavLink, Outlet, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { LayoutDashboard, BookOpen, Users, Map, Users2, ArrowLeft, Briefcase, Award, Settings } from 'lucide-react';
+import { LayoutDashboard, BookOpen, Users, Map, Users2, ArrowLeft, Briefcase, Award, Settings, LogOut } from 'lucide-react';
 
 const adminNav = [
   { to: '/admin', icon: LayoutDashboard, label: 'Dashboard', end: true },
@@ -15,7 +15,7 @@ const adminNav = [
 ];
 
 export default function AdminLayout() {
-  const { user, loading } = useAuth();
+  const { user, loading, logout } = useAuth();
   const navigate = useNavigate();
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#f5f6fa' }}>
@@ -45,10 +45,14 @@ export default function AdminLayout() {
             </NavLink>
           ))}
         </nav>
-        <div style={{ padding: '8px 8px 20px' }}>
+        <div style={{ padding: '8px 8px 20px', display: 'flex', flexDirection: 'column', gap: 2 }}>
           <button onClick={() => navigate('/')}
             style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', color: '#8892a4', background: 'none', border: 'none', borderRadius: 8, width: '100%', cursor: 'pointer', fontSize: 14 }}>
             <ArrowLeft size={18} /> Back to Site
+          </button>
+          <button onClick={() => { logout(); navigate('/login'); }}
+            style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', color: '#e74c3c', background: 'none', border: 'none', borderRadius: 8, width: '100%', cursor: 'pointer', fontSize: 14 }}>
+            <LogOut size={18} /> Log Out
           </button>
         </div>
       </aside>
