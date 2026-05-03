@@ -6,9 +6,18 @@ const upload = new Hono();
 const ALLOWED_IMAGES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 const ALLOWED_DOCS   = ['application/pdf'];
 const ALLOWED_VIDEO  = ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime'];
-const MAX_IMAGE = 5  * 1024 * 1024;  //  5 MB
-const MAX_DOC   = 20 * 1024 * 1024;  // 20 MB
-const MAX_VIDEO = 200 * 1024 * 1024; // 200 MB
+const ALLOWED_OFFICE = [
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+];
+const MAX_IMAGE  = 5   * 1024 * 1024;  //   5 MB
+const MAX_DOC    = 20  * 1024 * 1024;  //  20 MB
+const MAX_VIDEO  = 200 * 1024 * 1024;  // 200 MB
+const MAX_OFFICE = 50  * 1024 * 1024;  //  50 MB
 
 // POST /api/upload — admin only, image upload for course/community covers
 upload.post('/', authMiddleware, adminMiddleware, async (c) => {
@@ -69,6 +78,41 @@ upload.post('/avatar', authMiddleware, async (c) => {
     return c.json({ url: `${origin}/api/images/avatars/${key.replace('avatars/', '')}` });
   } catch (err) {
     console.error('Avatar upload error:', err?.message);
+    return c.json({ error: `Upload failed: ${err?.message}` }, 500);
+  }
+});
+
+// POST /api/upload/resource — admin only, library resource upload (PDF, video, PPT, DOC, image)
+upload.post('/resource', authMiddleware, adminMiddleware, async (c) => {
+  try {
+    const body = await c.req.parseBody();
+    const file = body['file'];
+    if (!file || typeof file === 'string') return c.json({ error: 'No file provided.' }, 400);
+    const isImage  = ALLOWED_IMAGES.includes(file.type);
+    const isPdf    = ALLOWED_DOCS.includes(file.type);
+    const isVideo  = ALLOWED_VIDEO.includes(file.type);
+    const isOffice = ALLOWED_OFFICE.includes(file.type);
+    if (!isImage && !isPdf && !isVideo && !isOffice) {
+      return c.json({ error: 'Unsupported file type. Allowed: PDF, video (MP4/WebM), PowerPoint, Word, Excel, images.' }, 415);
+    }
+    const maxSize = isVideo ? MAX_VIDEO : isOffice ? MAX_OFFICE : isPdf ? MAX_DOC : MAX_IMAGE;
+    if (file.size > maxSize) return c.json({ error: `File too large. Max ${isVideo ? '200' : isOffice ? '50' : isPdf ? '20' : '5'} MB.` }, 413);
+    const rawExt = file.name?.split('.').pop()?.replace(/[^a-z0-9]/gi, '').toLowerCase() || 'bin';
+    const folder = isVideo ? 'library/video' : isImage ? 'library/image' : 'library/doc';
+    const key = `${folder}/${crypto.randomUUID()}.${rawExt}`;
+    await c.env.IMAGES.put(key, await file.arrayBuffer(), { httpMetadata: { contentType: file.type } });
+    const origin = new URL(c.req.url).origin;
+    const url = `${origin}/api/files/${key}`;
+    let file_type = 'document';
+    if (isVideo) file_type = 'video';
+    else if (isImage) file_type = 'image';
+    else if (file.type.includes('pdf')) file_type = 'pdf';
+    else if (file.type.includes('presentation') || file.type.includes('powerpoint')) file_type = 'ppt';
+    else if (file.type.includes('word') || file.type.includes('msword')) file_type = 'doc';
+    else if (file.type.includes('sheet') || file.type.includes('excel')) file_type = 'xls';
+    return c.json({ url, file_type, file_name: file.name, file_size: file.size });
+  } catch (err) {
+    console.error('Resource upload error:', err?.message);
     return c.json({ error: `Upload failed: ${err?.message}` }, 500);
   }
 });

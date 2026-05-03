@@ -1,7 +1,7 @@
 ﻿import { useState, useEffect } from 'react';
 import { NavLink, Outlet, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { LayoutDashboard, BookOpen, Users, Map, Users2, ArrowLeft, Briefcase, Award, Settings, LogOut } from 'lucide-react';
+import { LayoutDashboard, BookOpen, Users, Map, Users2, ArrowLeft, Briefcase, Award, Settings, LogOut, Library } from 'lucide-react';
 
 const adminNav = [
   { to: '/admin', icon: LayoutDashboard, label: 'Dashboard', end: true },
@@ -11,6 +11,7 @@ const adminNav = [
   { to: '/admin/communities', icon: Users2, label: 'Communities' },
   { to: '/admin/job-roles', icon: Briefcase, label: 'Job Roles' },
   { to: '/admin/skill-frameworks', icon: Award, label: 'Skill Frameworks' },
+  { to: '/admin/resources', icon: Library, label: 'Resource Library' },
   { to: '/admin/settings', icon: Settings, label: 'Settings' },
 ];
 

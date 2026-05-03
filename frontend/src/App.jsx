@@ -29,6 +29,7 @@ import AdminCommunities from './pages/admin/AdminCommunities';
 import AdminCourseware from './pages/admin/AdminCourseware';
 import AdminJobRoles from './pages/admin/AdminJobRoles';
 import AdminSkillFrameworks from './pages/admin/AdminSkillFrameworks';
+import AdminResources from './pages/admin/AdminResources';
 import AdminSettings from './pages/admin/AdminSettings';
 
 export default function App() {
@@ -63,6 +64,7 @@ export default function App() {
             <Route path="courseware/:courseId" element={<AdminCourseware />} />
             <Route path="job-roles" element={<AdminJobRoles />} />
             <Route path="skill-frameworks" element={<AdminSkillFrameworks />} />
+            <Route path="resources" element={<AdminResources />} />
             <Route path="settings" element={<AdminSettings />} />
           </Route>
 
