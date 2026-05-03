@@ -20,6 +20,7 @@ import Pathways from './pages/Pathways';
 import Communities from './pages/Communities';
 import AIAssistant from './pages/AIAssistant';
 import Profile from './pages/Profile';
+import KnowledgeSearch from './pages/KnowledgeSearch';
 
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminCourses from './pages/admin/AdminCourses';
@@ -51,6 +52,7 @@ export default function App() {
             <Route path="/pathways" element={<Pathways />} />
             <Route path="/communities" element={<Communities />} />
             <Route path="/ai-assistant" element={<AIAssistant />} />
+            <Route path="/knowledge-search" element={<KnowledgeSearch />} />
             <Route path="/profile" element={<Profile />} />
           </Route>
 

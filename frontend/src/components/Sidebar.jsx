@@ -2,7 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   Home, Compass, BookOpen, Map, Users, Sparkles,
-  Settings, ChevronLeft, GraduationCap, LogOut, UserCircle
+  Settings, ChevronLeft, GraduationCap, LogOut, UserCircle, Search
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -14,6 +14,7 @@ const navItems = [
     { to: '/pathways', icon: Map, label: 'Pathways' },
     { to: '/communities', icon: Users, label: 'Communities' },
     { to: '/ai-assistant', icon: Sparkles, label: 'AI Assistant' },
+    { to: '/knowledge-search', icon: Search, label: 'Knowledge Search' },
   ]},
 ];
 
