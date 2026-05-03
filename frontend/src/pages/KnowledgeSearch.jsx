@@ -297,6 +297,7 @@ export default function KnowledgeSearch() {
   const shown   = showAll ? visible : visible.slice(0, 5);
 
   return (
+    <>
     <div style={{ minHeight: '100vh', background: '#f7f9fc', fontFamily: 'inherit' }}>
       {/* ── Page Header ── */}
       <div style={{ background: '#fff', borderBottom: '1px solid #e9ecf0', padding: '28px 36px 0' }}>
@@ -570,5 +571,8 @@ export default function KnowledgeSearch() {
         </div>
       </div>
     </div>
+
+    {preview && <PreviewModal item={preview} onClose={() => setPreview(null)} />}
+    </>
   );
 }
