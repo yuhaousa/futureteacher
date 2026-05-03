@@ -4,7 +4,67 @@ import {
   Search, X, Sparkles, FileText, FileVideo2, File, Globe,
   Bookmark, MoreHorizontal, ChevronDown, SlidersHorizontal,
   Clock, ArrowRight, CheckCircle2, BookOpen, Users, Play, ExternalLink,
+  Maximize2,
 } from 'lucide-react';
+
+/* ─── embed helper ───────────────────────────────────────────── */
+function toEmbedUrl(url) {
+  if (!url) return null;
+  const ytWatch = url.match(/youtube\.com\/watch\?.*v=([A-Za-z0-9_-]+)/);
+  if (ytWatch) return `https://www.youtube.com/embed/${ytWatch[1]}?autoplay=1&rel=0`;
+  const ytShort = url.match(/youtu\.be\/([A-Za-z0-9_-]+)/);
+  if (ytShort) return `https://www.youtube.com/embed/${ytShort[1]}?autoplay=1&rel=0`;
+  return url; // PDF / R2 direct URL — iframe-able as-is
+}
+
+/* ─── preview modal ──────────────────────────────────────────── */
+function PreviewModal({ item, onClose }) {
+  const embedUrl = toEmbedUrl(item.url);
+  const isYT = /youtube\.com\/embed\//.test(embedUrl);
+  return (
+    <div
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+      style={{
+        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)',
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+        justifyContent: 'center', zIndex: 3000, padding: '20px',
+      }}
+    >
+      {/* header */}
+      <div style={{ width: '100%', maxWidth: 920, display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+        <span style={{ color: '#fff', fontWeight: 700, fontSize: 15, flex: 1, marginRight: 16, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.title}</span>
+        <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+          <a href={item.url} target="_blank" rel="noopener noreferrer"
+            style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(255,255,255,0.15)', color: '#fff', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, textDecoration: 'none' }}>
+            <ExternalLink size={13} /> Open in new tab
+          </a>
+          <button onClick={onClose}
+            style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 8, padding: '6px 10px', cursor: 'pointer', color: '#fff', display: 'flex', alignItems: 'center' }}>
+            <X size={16} />
+          </button>
+        </div>
+      </div>
+      {/* iframe */}
+      <div style={{ width: '100%', maxWidth: 920, borderRadius: 12, overflow: 'hidden', background: '#000', aspectRatio: '16/9', boxShadow: '0 20px 60px rgba(0,0,0,0.6)' }}>
+        <iframe
+          src={embedUrl}
+          title={item.title}
+          width="100%" height="100%"
+          frameBorder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+          allowFullScreen
+          style={{ display: 'block', width: '100%', height: '100%' }}
+        />
+      </div>
+      {!isYT && (
+        <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, marginTop: 10, textAlign: 'center' }}>
+          If the content doesn't load, the site may restrict embedding.
+          Use <a href={item.url} target="_blank" rel="noopener noreferrer" style={{ color: '#7ec8e3' }}>Open in new tab</a> instead.
+        </p>
+      )}
+    </div>
+  );
+}
 
 /* ─── helpers ────────────────────────────────────────────────── */
 const FILE_ICONS = {
@@ -55,49 +115,43 @@ function tabFilter(tab, type) {
   return true;
 }
 
-function ResultRow({ item }) {
+function ResultRow({ item, onPreview }) {
   const meta = FILE_ICONS[item.type] || FILE_ICONS.link;
   const isVideo = item.type === 'video';
+  const isPreviewable = !!(item.url);
   const Icon = isVideo ? FileVideo2
     : item.type === 'course' ? BookOpen
     : item.type === 'community' ? Users
     : item.type === 'link' ? Globe : FileText;
-
-  const handleOpen = () => {
-    if (item.url) window.open(item.url, '_blank', 'noopener,noreferrer');
-  };
 
   return (
     <div style={{
       display: 'flex', gap: 14, padding: '16px 0',
       borderBottom: '1px solid #f0f2f5', alignItems: 'flex-start',
     }}>
-      {/* icon — clickable if has url */}
+      {/* icon */}
       <div
-        onClick={item.url ? handleOpen : undefined}
+        onClick={isPreviewable ? () => onPreview(item) : undefined}
         style={{
           width: 44, height: 44, borderRadius: 8, background: meta.bg,
           display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-          cursor: item.url ? 'pointer' : 'default',
-          position: 'relative',
+          cursor: isPreviewable ? 'pointer' : 'default',
         }}
-        title={item.url ? (isVideo ? 'Watch video' : 'Open link') : undefined}
+        title={isPreviewable ? (isVideo ? 'Watch video' : 'Preview') : undefined}
       >
-        {isVideo && item.url
-          ? <Play size={20} color="#fff" fill="#fff" />
-          : <Icon size={20} color="#fff" />}
+        {isVideo && item.url ? <Play size={20} color="#fff" fill="#fff" /> : <Icon size={20} color="#fff" />}
       </div>
 
       {/* body */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
-          {item.url ? (
-            <a
-              href={item.url} target="_blank" rel="noopener noreferrer"
-              style={{ fontWeight: 600, fontSize: 14, color: '#1a2035', textDecoration: 'none' }}
+          {isPreviewable ? (
+            <button
+              onClick={() => onPreview(item)}
+              style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontWeight: 600, fontSize: 14, color: '#1a2035', textAlign: 'left' }}
               onMouseEnter={e => e.currentTarget.style.color = '#2980b9'}
               onMouseLeave={e => e.currentTarget.style.color = '#1a2035'}
-            >{item.title}</a>
+            >{item.title}</button>
           ) : (
             <span style={{ fontWeight: 600, fontSize: 14, color: '#1a2035' }}>{item.title}</span>
           )}
@@ -122,19 +176,19 @@ function ResultRow({ item }) {
 
       {/* actions */}
       <div style={{ display: 'flex', gap: 4, flexShrink: 0, alignItems: 'center' }}>
-        {item.url && (
-          <a
-            href={item.url} target="_blank" rel="noopener noreferrer"
+        {isPreviewable && (
+          <button
+            onClick={() => onPreview(item)}
             style={{
               display: 'flex', alignItems: 'center', gap: 4,
               background: isVideo ? '#9b59b6' : '#e8f4fd',
               color: isVideo ? '#fff' : '#2980b9',
               border: 'none', borderRadius: 6, padding: '5px 10px',
-              cursor: 'pointer', textDecoration: 'none', fontSize: 12, fontWeight: 600,
+              cursor: 'pointer', fontSize: 12, fontWeight: 600,
             }}
           >
-            {isVideo ? <><Play size={12} fill="currentColor" /> Watch</> : <><ExternalLink size={12} /> Open</>}
-          </a>
+            {isVideo ? <><Play size={12} fill="currentColor" /> Watch</> : <><Maximize2 size={12} /> Preview</>}
+          </button>
         )}
         <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#c0c7d4', padding: 6, borderRadius: 6 }}>
           <Bookmark size={16} />
@@ -173,6 +227,7 @@ export default function KnowledgeSearch() {
     { q: 'science lesson ideas primary 5', ago: '2 days ago' },
   ]);
   const [showAll, setShowAll] = useState(false);
+  const [preview, setPreview] = useState(null);
   const inputRef = useRef();
 
   async function runSearch(q) {
@@ -425,7 +480,7 @@ export default function KnowledgeSearch() {
                   No results found for "{submitted}" in {activeTab}.
                 </div>
               ) : (
-                shown.map(item => <ResultRow key={item.id} item={item} />)
+                shown.map(item => <ResultRow key={item.id} item={item} onPreview={setPreview} />)
               )}
 
               {visible.length > 5 && (

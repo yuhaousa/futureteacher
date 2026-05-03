@@ -1,6 +1,63 @@
 import { useState, useEffect, useRef } from 'react';
 import api from '../../api/client';
-import { Plus, Pencil, Trash2, X, Upload, ExternalLink, FileText, Video, Image, FileSpreadsheet, Presentation, Link, Brain, Tag, Search, Filter } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Upload, ExternalLink, FileText, Video, Image, FileSpreadsheet, Presentation, Link, Brain, Tag, Search, Filter, Play, Maximize2 } from 'lucide-react';
+
+/* ─── embed helper ─────────────────────────────────────────────── */
+function toEmbedUrl(url) {
+  if (!url) return null;
+  const ytWatch = url.match(/youtube\.com\/watch\?.*v=([A-Za-z0-9_-]+)/);
+  if (ytWatch) return `https://www.youtube.com/embed/${ytWatch[1]}?autoplay=1&rel=0`;
+  const ytShort = url.match(/youtu\.be\/([A-Za-z0-9_-]+)/);
+  if (ytShort) return `https://www.youtube.com/embed/${ytShort[1]}?autoplay=1&rel=0`;
+  return url;
+}
+
+/* ─── preview modal ────────────────────────────────────────────── */
+function PreviewModal({ item, onClose }) {
+  const embedUrl = toEmbedUrl(item.file_url);
+  const isYT = /youtube\.com\/embed\//.test(embedUrl);
+  return (
+    <div
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+      style={{
+        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)',
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+        justifyContent: 'center', zIndex: 2000, padding: 20,
+      }}
+    >
+      <div style={{ width: '100%', maxWidth: 920, display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+        <span style={{ color: '#fff', fontWeight: 700, fontSize: 15, flex: 1, marginRight: 16, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.title}</span>
+        <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+          <a href={item.file_url} target="_blank" rel="noopener noreferrer"
+            style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(255,255,255,0.15)', color: '#fff', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, textDecoration: 'none' }}>
+            <ExternalLink size={13} /> Open in new tab
+          </a>
+          <button onClick={onClose}
+            style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 8, padding: '6px 10px', cursor: 'pointer', color: '#fff', display: 'flex', alignItems: 'center' }}>
+            <X size={16} />
+          </button>
+        </div>
+      </div>
+      <div style={{ width: '100%', maxWidth: 920, borderRadius: 12, overflow: 'hidden', background: '#000', aspectRatio: '16/9', boxShadow: '0 20px 60px rgba(0,0,0,0.6)' }}>
+        <iframe
+          src={embedUrl}
+          title={item.title}
+          width="100%" height="100%"
+          frameBorder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+          allowFullScreen
+          style={{ display: 'block', width: '100%', height: '100%' }}
+        />
+      </div>
+      {!isYT && (
+        <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, marginTop: 10, textAlign: 'center' }}>
+          If the content doesn’t load, the site may restrict embedding.
+          Use <a href={item.file_url} target="_blank" rel="noopener noreferrer" style={{ color: '#7ec8e3' }}>Open in new tab</a> instead.
+        </p>
+      )}
+    </div>
+  );
+}
 
 const FILE_TYPES = ['pdf', 'video', 'ppt', 'doc', 'xls', 'image', 'link'];
 const CATEGORIES = ['pedagogy', 'assessment', 'technology', 'wellbeing', 'leadership', 'curriculum', 'special needs'];
@@ -77,6 +134,7 @@ export default function AdminResources() {
   const [filterType, setFilterType] = useState('');
   const [filterCat, setFilterCat] = useState('');
   const [filterAI, setFilterAI] = useState(false);
+  const [preview, setPreview] = useState(null);
   const fileRef = useRef(null);
 
   const load = async () => {
@@ -231,14 +289,14 @@ export default function AdminResources() {
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                     {r.file_url && (
                       r.file_type === 'video'
-                        ? <a href={r.file_url} target="_blank" rel="noopener noreferrer"
-                            style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#3498db', color: '#fff', border: 'none', borderRadius: 6, padding: '6px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 600, textDecoration: 'none' }}>
-                            <Video size={13} /> Watch
-                          </a>
-                        : <a href={r.file_url} target="_blank" rel="noopener noreferrer"
-                            style={{ background: '#e8f4fd', color: '#3498db', border: 'none', borderRadius: 6, padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
-                            <ExternalLink size={13} />
-                          </a>
+                        ? <button onClick={() => setPreview(r)}
+                            style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#3498db', color: '#fff', border: 'none', borderRadius: 6, padding: '6px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
+                            <Play size={13} fill="currentColor" /> Watch
+                          </button>
+                        : <button onClick={() => setPreview(r)}
+                            style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#e8f4fd', color: '#3498db', border: 'none', borderRadius: 6, padding: '6px 10px', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
+                            <Maximize2 size={13} /> Preview
+                          </button>
                     )}
                     <button onClick={() => openEdit(r)} style={{ background: '#f0eeff', color: '#6c63ff', border: 'none', borderRadius: 6, padding: '6px 10px', cursor: 'pointer' }}><Pencil size={13} /></button>
                     <button onClick={() => handleDelete(r.id)} style={{ background: '#fdeaea', color: '#e74c3c', border: 'none', borderRadius: 6, padding: '6px 10px', cursor: 'pointer' }}><Trash2 size={13} /></button>
@@ -250,7 +308,7 @@ export default function AdminResources() {
         </div>
       )}
 
-      {/* Modal */}
+      {/* Edit / Create Modal */}
       {modal !== null && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }}>
           <div style={{ background: '#fff', borderRadius: 16, padding: 32, width: '100%', maxWidth: 600, maxHeight: '92vh', overflowY: 'auto' }}>
@@ -363,6 +421,9 @@ export default function AdminResources() {
           </div>
         </div>
       )}
+
+      {/* Preview Modal */}
+      {preview && <PreviewModal item={preview} onClose={() => setPreview(null)} />}
     </div>
   );
 }
