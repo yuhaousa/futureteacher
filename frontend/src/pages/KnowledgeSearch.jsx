@@ -3,7 +3,7 @@ import api from '../api/client';
 import {
   Search, X, Sparkles, FileText, FileVideo2, File, Globe,
   Bookmark, MoreHorizontal, ChevronDown, SlidersHorizontal,
-  Clock, ArrowRight, CheckCircle2, BookOpen, Users,
+  Clock, ArrowRight, CheckCircle2, BookOpen, Users, Play, ExternalLink,
 } from 'lucide-react';
 
 /* ─── helpers ────────────────────────────────────────────────── */
@@ -57,28 +57,50 @@ function tabFilter(tab, type) {
 
 function ResultRow({ item }) {
   const meta = FILE_ICONS[item.type] || FILE_ICONS.link;
-  const Icon = item.type === 'video' ? FileVideo2
+  const isVideo = item.type === 'video';
+  const Icon = isVideo ? FileVideo2
     : item.type === 'course' ? BookOpen
     : item.type === 'community' ? Users
     : item.type === 'link' ? Globe : FileText;
+
+  const handleOpen = () => {
+    if (item.url) window.open(item.url, '_blank', 'noopener,noreferrer');
+  };
 
   return (
     <div style={{
       display: 'flex', gap: 14, padding: '16px 0',
       borderBottom: '1px solid #f0f2f5', alignItems: 'flex-start',
     }}>
-      {/* icon */}
-      <div style={{
-        width: 44, height: 44, borderRadius: 8, background: meta.bg,
-        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-      }}>
-        <Icon size={20} color="#fff" />
+      {/* icon — clickable if has url */}
+      <div
+        onClick={item.url ? handleOpen : undefined}
+        style={{
+          width: 44, height: 44, borderRadius: 8, background: meta.bg,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+          cursor: item.url ? 'pointer' : 'default',
+          position: 'relative',
+        }}
+        title={item.url ? (isVideo ? 'Watch video' : 'Open link') : undefined}
+      >
+        {isVideo && item.url
+          ? <Play size={20} color="#fff" fill="#fff" />
+          : <Icon size={20} color="#fff" />}
       </div>
 
       {/* body */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
-          <span style={{ fontWeight: 600, fontSize: 14, color: '#1a2035' }}>{item.title}</span>
+          {item.url ? (
+            <a
+              href={item.url} target="_blank" rel="noopener noreferrer"
+              style={{ fontWeight: 600, fontSize: 14, color: '#1a2035', textDecoration: 'none' }}
+              onMouseEnter={e => e.currentTarget.style.color = '#2980b9'}
+              onMouseLeave={e => e.currentTarget.style.color = '#1a2035'}
+            >{item.title}</a>
+          ) : (
+            <span style={{ fontWeight: 600, fontSize: 14, color: '#1a2035' }}>{item.title}</span>
+          )}
           {item.badge && (
             <span style={{
               fontSize: 10, padding: '2px 8px', borderRadius: 10, fontWeight: 600,
@@ -99,12 +121,23 @@ function ResultRow({ item }) {
       </div>
 
       {/* actions */}
-      <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+      <div style={{ display: 'flex', gap: 4, flexShrink: 0, alignItems: 'center' }}>
+        {item.url && (
+          <a
+            href={item.url} target="_blank" rel="noopener noreferrer"
+            style={{
+              display: 'flex', alignItems: 'center', gap: 4,
+              background: isVideo ? '#9b59b6' : '#e8f4fd',
+              color: isVideo ? '#fff' : '#2980b9',
+              border: 'none', borderRadius: 6, padding: '5px 10px',
+              cursor: 'pointer', textDecoration: 'none', fontSize: 12, fontWeight: 600,
+            }}
+          >
+            {isVideo ? <><Play size={12} fill="currentColor" /> Watch</> : <><ExternalLink size={12} /> Open</>}
+          </a>
+        )}
         <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#c0c7d4', padding: 6, borderRadius: 6 }}>
           <Bookmark size={16} />
-        </button>
-        <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#c0c7d4', padding: 6, borderRadius: 6 }}>
-          <MoreHorizontal size={16} />
         </button>
       </div>
     </div>
@@ -161,6 +194,7 @@ export default function KnowledgeSearch() {
         items.forEach(r => hits.push({
           id: `lib-${r.id}`, type: r.file_type || 'link',
           title: r.title,
+          url: r.file_url || null,
           badge: r.category ? r.category.charAt(0).toUpperCase() + r.category.slice(1) : null,
           size: r.file_size ? formatBytes(r.file_size) : null,
           source: r.target_audience ? `${r.target_audience} audience` : 'MOE Library',

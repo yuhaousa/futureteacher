@@ -228,12 +228,17 @@ export default function AdminResources() {
                 {/* Actions */}
                 <div style={{ padding: '10px 18px', borderTop: '1px solid #f0f2f7', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontSize: 11, color: '#b0b7c3' }}>{r.uploader_name || 'Admin'}</span>
-                  <div style={{ display: 'flex', gap: 8 }}>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                     {r.file_url && (
-                      <a href={r.file_url} target="_blank" rel="noopener noreferrer"
-                        style={{ background: '#e8f4fd', color: '#3498db', border: 'none', borderRadius: 6, padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
-                        <ExternalLink size={13} />
-                      </a>
+                      r.file_type === 'video'
+                        ? <a href={r.file_url} target="_blank" rel="noopener noreferrer"
+                            style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#3498db', color: '#fff', border: 'none', borderRadius: 6, padding: '6px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 600, textDecoration: 'none' }}>
+                            <Video size={13} /> Watch
+                          </a>
+                        : <a href={r.file_url} target="_blank" rel="noopener noreferrer"
+                            style={{ background: '#e8f4fd', color: '#3498db', border: 'none', borderRadius: 6, padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                            <ExternalLink size={13} />
+                          </a>
                     )}
                     <button onClick={() => openEdit(r)} style={{ background: '#f0eeff', color: '#6c63ff', border: 'none', borderRadius: 6, padding: '6px 10px', cursor: 'pointer' }}><Pencil size={13} /></button>
                     <button onClick={() => handleDelete(r.id)} style={{ background: '#fdeaea', color: '#e74c3c', border: 'none', borderRadius: 6, padding: '6px 10px', cursor: 'pointer' }}><Trash2 size={13} /></button>
